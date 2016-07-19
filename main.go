@@ -8,9 +8,10 @@ import (
 	"github.com/eskibars/wmibeat/beater"
 )
 
+var Name = "wmibeat"
+
 func main() {
-	err := beat.Run("wmibeat", "", beater.New())
-	if err != nil {
+	if err := beat.Run(Name, "", beater.New); err != nil {
 		os.Exit(1)
 	}
 }
