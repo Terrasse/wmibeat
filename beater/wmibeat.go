@@ -97,6 +97,42 @@ func (bt *Wmibeat) Setup(b *beat.Beat) error {
 func (bt *Wmibeat) Run(b *beat.Beat) error {
 	var err error
 
+	logp.Info("wmibeat is setting up!")
+
+	bt.events = b.Publisher.Connect()
+
+	// Setting default period if not set
+	if bt.beatConfig.Period == "" {
+		bt.beatConfig.Period = "30s"
+	}
+
+	bt.period, err = time.ParseDuration(bt.beatConfig.Period)
+	if err != nil {
+		return err
+	}
+
+	bt.compiledWmiQueries = map[string]string{}
+	for _, class := range bt.beatConfig.Classes {
+		if len(class.Fields) == 0 {
+			var errorString bytes.Buffer
+			errorString.WriteString("No fields defined for class ")
+			errorString.WriteString(class.Class)
+			errorString.WriteString(".  Skipping")
+			logp.Warn(errorString.String())
+			continue
+		}
+		var query bytes.Buffer
+		query.WriteString("SELECT ")
+		query.WriteString(strings.Join(class.Fields, ","))
+		query.WriteString(" FROM ")
+		query.WriteString(class.Class)
+		if class.WhereClause != "" {
+			query.WriteString(" WHERE ")
+			query.WriteString(class.WhereClause)
+		}
+		bt.compiledWmiQueries[class.Class] = query.String()
+	}
+
 	logp.Info("wmibeat is running! Hit CTRL-C to stop it.")
 
 	ticker := time.NewTicker(bt.period)
